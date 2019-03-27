@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik
+    command: --api --docker
+    ports:
+      - "80:80"     # The HTTP port
+      # - "8080:8080" # The Web UI (enabled by --api)
+    networks:
+      - traefik_web
+      - internal 
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
+  web:
+    build: 
+      context: ./docker/php-nginx
+    labels:
+      - traefik.backend=php-nginx
+      - traefik.docker.network=traefik_webgateway
+      - traefik.frontend.rule=Host:php-nginx.localhost
+      - traefik.port=8080 
+    networks:
+      - internal
+      - traefik_web
+    volumes:
+      - ${PWD}/backend:/var/www:cached
+    working_dir: /var/www
+    environment:
+      - PHP.display_errors=On
+      - PHP.error_reporting=-1
+      - VHOST=symfony4     
+  postgres:
+    image: postgres 
+    tty: true
+    volumes:
+      - ./app-db:/var/lib/postgresql/data
+      - ./docker/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d 
+    environment:
+      - POSTGRES_PASSWORD=secret  
+    labels:
+      - traefik.enable=false
+    networks:
+      - internal  
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   labels:  
+  #     - traefik.backend=adminer
+  #     - traefik.docker.network=traefik_web
+  #     - traefik.frontend.rule=Host:adminer.localhost
+  #     - traefik.port=8080    
+  #   networks:
+  #     - internal
+  #     - traefik_web
+  #   depends_on:
+  #     - postgres 
+networks:
+  internal:
+    external: false
+  traefik_web:
+    external: true     

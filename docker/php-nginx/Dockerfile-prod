@@ -1,0 +1,20 @@
+FROM jtreminio/php-nginx:7.3
+
+RUN apt-get update && apt-get install -y \
+        libpq-dev \
+        libmcrypt-dev \
+        php7.3-pgsql
+
+RUN ln -s /etc/php/${PHP_VER}/mods-available/pdo_pgsql.ini /etc/php/${PHP_VER}/cli/conf.d/20-pdo_pgsql.ini
+RUN ln -s /etc/php/${PHP_VER}/mods-available/pdo_pgsql.ini /etc/php/${PHP_VER}/fpm/conf.d/20-pdo_pgsql.ini
+
+COPY --chown=www-data:www-data ./backend /var/www
+
+ENV APP_ENV prod
+ENV APP_DEBUG 0
+
+USER www-data
+
+RUN cd ~ && \
+    composer install --no-dev --optimize-autoloader && \
+    php bin/console cache:clear

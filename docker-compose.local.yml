@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  traefik:
+    ports:
+      - "80:80"     # The HTTP port
+      - "8080:8080" # The Web UI (enabled by --api)
+  web:
+    volumes:
+      - ${PWD}/backend:/var/www:cached   
+  adminer:
+    image: adminer
+    restart: always
+    labels:  
+      - traefik.backend=adminer
+      - traefik.docker.network=traefik_web
+      - traefik.frontend.rule=Host:adminer.localhost
+      - traefik.port=8080    
+    networks:
+      - internal
+      - traefik_web
+    depends_on:
+      - postgres 
+networks:
+  internal:
+    external: false
+  traefik_web:
+    external: true     
